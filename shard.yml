@@ -19,6 +19,11 @@ dependencies:
   tryst:
     github: jamescook/tryst
 
+development_dependencies:
+  ameba:
+    github: crystal-ameba/ameba
+    tag: v1.7.0-dev
+
 # Informational (shards does not install these), but it is the one place
 # a consumer can find out what has to exist on the box before this shard
 # will link. Package names differ per platform: apt wants libsdl3-dev,
