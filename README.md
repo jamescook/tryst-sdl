@@ -1,6 +1,6 @@
 # tryst-sdl
 
-SDL3 rendering, audio and gamepad input for [tryst](../), Crystal's Tcl/Tk
+SDL3 rendering, audio and gamepad input for [tryst](https://github.com/jamescook/tryst), Crystal's Tcl/Tk
 binding.
 
 ## Rendering
@@ -124,7 +124,7 @@ scripts/docker-test.sh        # Debian forky + Xvfb, same suite
 ```
 
 Both run the same examples with nothing skipped or gated by platform.
-`scripts/docker-test.sh` builds from the repo root rather than this
-directory, because the `path: ../` dependency on tryst has to be inside
-the build context; it takes the same arguments `crystal spec` does, so a
+`scripts/docker-test.sh` builds from this repo's own root; `shards
+install` inside the image fetches tryst directly via its `github:`
+dependency. It takes the same arguments `crystal spec` does, so a
 focused run works there too.

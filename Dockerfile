@@ -1,7 +1,7 @@
-# Dev/test image for tryst-sdl. Built from the REPO ROOT as context, not
-# from this directory - tryst-sdl depends on tryst through a `path: ../`
-# shard dependency, so the parent's src/ and shard.yml have to be inside
-# the build context. scripts/docker-test.sh does that for you.
+# Dev/test image for tryst-sdl. Built from this repo's own root as
+# context - tryst is a `github:` shard dependency now (its own repo), so
+# `shards install` fetches it directly rather than needing it copied
+# into the build context.
 #
 # Debian forky rather than the crystallang/crystal image the parent
 # project uses, purely for SDL3 packaging: that image is Ubuntu 24.04 and
@@ -32,7 +32,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tcl-dev tk-dev \
     libsdl3-dev libsdl3-mixer-dev libsdl3-image-dev libsdl3-ttf-dev \
     xvfb xauth \
-    ca-certificates curl gcc pkg-config \
+    ca-certificates curl git gcc pkg-config \
     libpcre2-dev libgc-dev libevent-dev libssl-dev zlib1g-dev libyaml-dev libxml2-dev \
     && rm -rf /var/lib/apt/lists/*
 
@@ -49,15 +49,7 @@ RUN set -eux; \
     ln -s /opt/crystal/bin/shards /usr/local/bin/shards; \
     crystal --version
 
-# The parent shard, laid out exactly as it is in the repo so that
-# `path: ../` resolves the same way it does on a developer's machine.
-# Copied file by file rather than as a whole directory: a local checkout
-# has lib/ symlinks and build artifacts in both trees that must not come
-# along, and being explicit here beats maintaining a .dockerignore at the
-# repo root that the parent project's own image would also inherit.
 WORKDIR /app
-COPY shard.yml ./
-COPY src/ src/
 
 # SDL's audio backends probe XDG_RUNTIME_DIR on the way to finding a
 # driver, and the PulseAudio client prints `error: XDG_RUNTIME_DIR is
@@ -70,10 +62,9 @@ COPY src/ src/
 ENV XDG_RUNTIME_DIR=/tmp/xdg-runtime
 RUN mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
 
-WORKDIR /app/tryst-sdl
-COPY tryst-sdl/shard.yml ./
-COPY tryst-sdl/src/ src/
-COPY tryst-sdl/spec/ spec/
+COPY shard.yml ./
+COPY src/ src/
+COPY spec/ spec/
 
 RUN shards install
 
