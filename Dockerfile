@@ -28,13 +28,22 @@ ARG CRYSTAL_RELEASE=1
 # lib_sdl.cr resolves through pkg-config, so pkg-config is a build
 # requirement and not just a convenience. The lib*-dev tail is what the
 # non-bundled Crystal tarball expects to find on the system.
-RUN apt-get update && apt-get install -y --no-install-recommends \
+#
+# The --mount=type=cache pair is what lets the GitHub-hosted CI build
+# keep apt's downloaded packages across runs (restored/saved by
+# buildkit-cache-dance in .github/workflows/crystal-spec.yml) when this
+# layer has to rebuild - same pattern as tryst's own Dockerfile. It
+# needs BuildKit, which every current docker build has by default.
+# Nothing to clean up afterwards: the lists live in the mount, not the
+# image.
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
     tcl-dev tk-dev \
     libsdl3-dev libsdl3-mixer-dev libsdl3-image-dev libsdl3-ttf-dev \
     xvfb xauth \
     ca-certificates curl git gcc pkg-config \
-    libpcre2-dev libgc-dev libevent-dev libssl-dev zlib1g-dev libyaml-dev libxml2-dev \
-    && rm -rf /var/lib/apt/lists/*
+    libpcre2-dev libgc-dev libevent-dev libssl-dev zlib1g-dev libyaml-dev libxml2-dev
 
 # uname -m already spells the architectures the way the release assets do
 # (aarch64 / x86_64), so no translation table is needed.
@@ -66,6 +75,17 @@ COPY shard.yml ./
 COPY src/ src/
 COPY spec/ spec/
 
+# Docker's cache key for this layer is shard.yml's own content, not
+# what's actually at the github: refs it resolves - any cache that
+# outlives one build (a long-running local daemon, or the type=gha
+# layer cache the CI workflow restores on every hosted run) would
+# otherwise keep reusing whatever tryst/ameba commit got fetched the
+# FIRST time this layer ever ran, no matter how many times the actual
+# dependency changed afterward. CACHEBUST (scripts/docker-test.sh
+# passes the time, the workflow passes the run id) forces this layer -
+# only this one, everything above it still caches normally - to always
+# re-resolve.
+ARG CACHEBUST=1
 RUN shards install
 
 CMD ["xvfb-run", "-a", "crystal", "spec"]

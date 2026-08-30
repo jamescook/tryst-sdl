@@ -55,6 +55,11 @@ jobs:
           tags: tryst-sdl-test:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            CACHEBUST=${{ github.run_id }}
 
+      # Verbose, same as tryst's and gemba's workflows: a hung or crashed
+      # fixture under Xvfb is then attributable to a named example from
+      # the log alone.
       - name: Run crystal spec
-        run: docker run --rm --init tryst-sdl-test:latest
+        run: docker run --rm --init -t tryst-sdl-test:latest xvfb-run -a crystal spec -v
