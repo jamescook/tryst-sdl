@@ -536,5 +536,35 @@ third = Tryst::SDL::Viewport.new(app, width: 100, height: 80, name: "vp_third")
 third.destroy
 app.update
 
+# Case 7: Tk destroys the FRAME, not the caller the viewport. The same
+# X11 hazard as case 6 from the other direction - here nothing calls
+# #destroy, so the viewport has to notice its frame going and give the
+# window back on its own, while it still exists. Proven the same way:
+# by creating another viewport afterwards.
+orphaned = Tryst::SDL::Viewport.new(app, width: 100, height: 80, name: "vp_orphaned")
+app.destroy(orphaned.path)
+raise "viewport: expected a frame destroyed by Tk to destroy the viewport" unless orphaned.destroyed?
+raise "viewport: expected .vp_orphaned gone" if app.winfo.exists?(".vp_orphaned")
+app.update
+
+after_orphan = Tryst::SDL::Viewport.new(app, width: 100, height: 80, name: "vp_after_orphan")
+raise "viewport: expected a viewport after an orphaned one to be usable" if after_orphan.renderer_name.empty?
+after_orphan.destroy
+app.update
+
+# Case 8: the root window going away takes a live viewport with it -
+# what closing the application does, and the way every downstream
+# spec's teardown ends. A second App afterwards proves the window was
+# released in time, the same as cases 6/7.
+survivor = Tryst::SDL::Viewport.new(app, width: 100, height: 80, name: "vp_survivor")
 app.destroy
+raise "viewport: expected the root's destroy to destroy the viewport" unless survivor.destroyed?
+
+again = Tryst::App.new(title: "viewport fixture, second app")
+again.show
+again.update
+last = Tryst::SDL::Viewport.new(again, width: 100, height: 80, name: "vp_last")
+raise "viewport: expected a viewport in a second App to be usable" if last.renderer_name.empty?
+again.destroy
+raise "viewport: expected the second root's destroy to destroy its viewport" unless last.destroyed?
 puts "OK"

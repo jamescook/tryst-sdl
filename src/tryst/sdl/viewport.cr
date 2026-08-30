@@ -86,6 +86,26 @@ module Tryst
 
         track_keyboard
         track_resize
+        release_on_frame_destroy
+      end
+
+      # Gives the adopted window back to SDL if Tk destroys the frame
+      # first - a root-window destroy (the WM close button, App#destroy)
+      # takes the frame with it, and nothing else would call #destroy.
+      # Not optional on X11: #destroy's ordering (SDL's own queued
+      # X_DeleteProperty has to reach the server while the window still
+      # exists, see there) is the viewport's own invariant to keep, not
+      # something every caller should have to know to arrange. Tk
+      # delivers the frame's <Destroy> BEFORE the XDestroyWindow of the
+      # toplevel being torn down, so the window is still there when this
+      # fires; #destroy's own `winfo exists` check keeps it from asking
+      # Tk to destroy a frame that is already half dead. Weak
+      # subscription keyed on this viewport, so it neither pins the
+      # viewport for the App's lifetime nor fires once it is garbage.
+      private def release_on_frame_destroy : Nil
+        @app.on_widget_destroyed(self) do |viewport, path|
+          viewport.destroy if path == viewport.path
+        end
       end
 
       # Whether SDL is painting over the whole toplevel rather than just
