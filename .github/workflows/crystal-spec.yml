@@ -13,18 +13,18 @@ jobs:
   spec:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       # The Dockerfile's own apt-get RUN uses --mount=type=cache, which
       # BuildKit keeps in the local daemon's cache - gone by default on
       # the next run, since GitHub Actions runners are ephemeral. This
       # restores/saves that cache mount via actions/cache instead.
       - name: Restore apt build cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: cache-mount
           key: docker-cache-${{ hashFiles('Dockerfile') }}
@@ -47,7 +47,7 @@ jobs:
       # whole apt-get layer outright instead of only skipping the
       # re-download.
       - name: Build image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           builder: ${{ steps.buildx.outputs.name }}
