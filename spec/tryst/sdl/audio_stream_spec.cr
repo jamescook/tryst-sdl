@@ -86,6 +86,58 @@ describe Tryst::SDL::AudioStream do
     end
   end
 
+  describe "#gain" do
+    it "starts at 1.0 and round-trips what it is set to" do
+      with_stream do |stream|
+        stream.gain.should eq(1.0_f32)
+
+        stream.gain = 0.25
+        stream.gain.should be_close(0.25, 0.0001)
+      end
+    end
+
+    # The two ends a consumer actually reaches for: silence without
+    # having to stop queueing, and amplification past the source's own
+    # level. SDL allows both, so neither is clamped away here.
+    it "accepts 0.0 for silence and a value above 1.0 to amplify" do
+      with_stream do |stream|
+        stream.gain = 0.0
+        stream.gain.should eq(0.0_f32)
+
+        stream.gain = 2.5
+        stream.gain.should be_close(2.5, 0.0001)
+      end
+    end
+
+    it "takes a Float64 as readily as a Float32" do
+      with_stream do |stream|
+        stream.gain = 0.5_f32
+        stream.gain.should be_close(0.5, 0.0001)
+
+        stream.gain = 0.75_f64
+        stream.gain.should be_close(0.75, 0.0001)
+      end
+    end
+
+    # SDL's own rejection names no value ("Parameter 'gain' is
+    # invalid"), so a negative gain is caught here instead.
+    it "refuses a negative gain, naming it" do
+      with_stream do |stream|
+        expect_raises(ArgumentError, /-0.5/) do
+          stream.gain = -0.5
+        end
+        stream.gain.should eq(1.0_f32)
+      end
+    end
+
+    it "refuses to answer once destroyed" do
+      stream = Tryst::SDL::AudioStream.new
+      stream.destroy
+      expect_raises(Tryst::SDL::Error, /destroyed/) { stream.gain }
+      expect_raises(Tryst::SDL::Error, /destroyed/) { stream.gain = 0.5 }
+    end
+  end
+
   describe "#clear" do
     it "throws away what has not played" do
       with_stream do |stream|

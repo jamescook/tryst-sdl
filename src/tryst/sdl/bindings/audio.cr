@@ -43,5 +43,14 @@ lib LibSDL
   fun pause_audio_stream_device = SDL_PauseAudioStreamDevice(stream : AudioStream*) : Bool
   fun resume_audio_stream_device = SDL_ResumeAudioStreamDevice(stream : AudioStream*) : Bool
   fun audio_stream_device_paused = SDL_AudioStreamDevicePaused(stream : AudioStream*) : Bool
+
+  # The raw AudioStream API's own gain, applied by SDL during the
+  # conversion it already does - distinct from SDL3_mixer's per-track and
+  # per-mixer gain (bindings/mixer.cr), which needs a mixer this API
+  # deliberately has none of. Getting it back reports -1.0 on failure,
+  # which is not a gain SDL will ever have accepted.
+  fun get_audio_stream_gain = SDL_GetAudioStreamGain(stream : AudioStream*) : Float32
+  fun set_audio_stream_gain = SDL_SetAudioStreamGain(stream : AudioStream*, gain : Float32) : Bool
+
   fun destroy_audio_stream = SDL_DestroyAudioStream(stream : AudioStream*)
 end

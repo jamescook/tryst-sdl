@@ -61,6 +61,10 @@ module Tryst
       # there is no real device to ask.
       @silent_playing = false
 
+      # Likewise for #gain - SDL's own default, kept so a silent stream
+      # reads back whatever was set on it.
+      @silent_gain = 1.0_f32
+
       # allow_silent: when the device fails to open, fall back to a
       # silent no-op stream instead of raising. `available?`/
       # `device_count` cannot be trusted to predict this in advance on
@@ -165,6 +169,37 @@ module Tryst
         check_open
         return @silent_playing if silent?
         !LibSDL.audio_stream_device_paused(@ptr)
+      end
+
+      # This stream's own volume: 1.0 unchanged, 0.0 silent, above 1.0
+      # amplifies. SDL applies it during the format conversion it is
+      # already doing on the way to the device, so handing it a gain
+      # costs nothing over scaling every sample first - and it is the
+      # only volume control this API has, SDL3_mixer's Track/Mixer gain
+      # belonging to a mixer no AudioStream goes through.
+      #
+      # Set it on a silent stream and it is remembered rather than
+      # applied, the same way #playing? answers from @silent_playing:
+      # there is no device to scale anything for, but a caller that sets
+      # a volume should still read that volume back.
+      def gain : Float32
+        check_open
+        return @silent_gain if silent?
+        LibSDL.get_audio_stream_gain(@ptr)
+      end
+
+      def gain=(value : Float32 | Float64) : Float32
+        check_open
+        gain = value.to_f32
+        # Rejected here rather than by SDL, whose own failure says only
+        # "Parameter 'gain' is invalid" without naming the value.
+        raise ArgumentError.new("gain must be 0.0 or greater, got #{gain}") if gain < 0
+        return @silent_gain = gain if silent?
+
+        unless LibSDL.set_audio_stream_gain(@ptr, gain)
+          raise Error.new("SDL_SetAudioStreamGain(#{gain}) failed: #{SDL.last_error}")
+        end
+        gain
       end
 
       # Throws away everything queued but not yet played.
