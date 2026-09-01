@@ -18,6 +18,7 @@ description: |
 dependencies:
   tryst:
     github: jamescook/tryst
+    version: "~> 0.1"
 
 development_dependencies:
   ameba:
